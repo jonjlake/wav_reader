@@ -31,3 +31,8 @@ typedef struct WaveFile
 	short **channel_samples;
 	int num_frames;
 } WaveFile;
+
+void read_wave(WaveFile *p_wavefile, char *filename);
+
+void destroy_wavearrays(WaveFile *p_wavefile);
+
