@@ -78,6 +78,39 @@ void kill_all_zeros(FILE *fp)
 	printf("Killed %d chars\n", i);
 }
 
+void allocate_wavearrays(WaveFile *p_wavefile)
+{
+	int i;
+
+	p_wavefile->channel_samples = (int **)calloc(p_wavefile->num_channels, sizeof(*p_wavefile->channel_samples));
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		p_wavefile->channel_samples[i] = (int *)calloc(p_wavefile->data_section_size / p_wavefile->bitrate_math, 
+				sizeof(*p_wavefile->channel_samples[i]));
+	}
+}
+
+void destroy_wavearrays(WaveFile *p_wavefile)
+{
+	int i;
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		free(p_wavefile->channel_samples[i]);
+	}
+	free(p_wavefile->channel_samples);
+	p_wavefile->channel_samples = NULL;
+}
+
+void read_data_chunk(FILE *fp, int *output_location, int num_bytes_to_read)
+{
+	int i;
+	*output_location = 0;
+	for (i = 0; i < num_bytes_to_read; i++)
+	{
+		*output_location += getc(fp) << (i * 8);
+	}
+}
+
 void read_wave(WaveFile *p_wavefile, char *filename)
 {
 	FILE *fp = fopen(filename, "r"); // Double check the open type
@@ -121,7 +154,21 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
 	}
 	/* Now we're ready to read the data! */
+	allocate_wavearrays(p_wavefile);
 
+
+	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
+	{
+		int j;
+		for (j = 0; j < p_wavefile->num_channels; j++)
+		{
+			read_data_chunk(fp, &p_wavefile->channel_samples[j][i], p_wavefile->bits_per_sample / 8);
+		}
+	}
+
+	printf("Read %d samples\n", i);
+	/* Don't destory here! */
+//	destroy_wavearrays(p_wavefile);
 	fclose(fp);
 }
 
@@ -155,5 +202,7 @@ int main()
 
 	print_header(wavefile);
 
+
+	destroy_wavearrays(&wavefile);
 	return 0;
 }

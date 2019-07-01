@@ -23,4 +23,9 @@ typedef struct WaveFile
 	char data_chunk_header[5];
 	int data_section_size_arr[4];
 	long int data_section_size;
+	/* Is sample data little-endian too? */
+//	int **left_channel_samples;
+//	int **right_channel_samples;
+	/* Leave it open for a generic number of channels */
+	int **channel_samples;
 } WaveFile;
