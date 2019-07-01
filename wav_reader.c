@@ -87,30 +87,72 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_string(fp, p_wavefile->file_type_header, 4);
 	read_string(fp, p_wavefile->format_chunk_marker, 4);
 	read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
+	/* Turn these into a "while NOT "fmt"" loop */
+#if 1
 	if (strcmp(p_wavefile->format_chunk_marker, "JUNK") == 0)
 	{
-		kill_junk(fp, p_wavefile->format_data_length_arr[3]);
+		kill_junk(fp, p_wavefile->format_data_length);
 		read_string(fp, p_wavefile->format_chunk_marker, 4);
 		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
 	}
 	if (strcmp(p_wavefile->format_chunk_marker, "bext") == 0)
 	{
-//		kill_all_zeros(fp);
-		kill_junk(fp, 602);
-//		kill_junk(fp, p_avefile->format_data_length, 4);
+		kill_junk(fp, p_wavefile->format_data_length);
 		read_string(fp, p_wavefile->format_chunk_marker, 4);
 		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
 	}
+#endif
+#if 0	
+	while (0 != strcmp(p_wavefile->format_chunk_marker, "fmt"))
+	{
+		kill_junk(fp, p_wavefile->format_data_length);
+		read_string(fp, p_wavefile->format_chunk_marker, 4);
+		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
+	}
+#endif
 	read_number(fp, p_wavefile->format_type_arr, &p_wavefile->format_type, 2);
 	read_number(fp, p_wavefile->num_channels_arr, &p_wavefile->num_channels, 2);
 	read_number(fp, p_wavefile->sample_rate_arr, &p_wavefile->sample_rate, 4);
 	read_number(fp, p_wavefile->sample_math_arr, &p_wavefile->sample_math, 4);
 	read_number(fp, p_wavefile->bitrate_math_arr, &p_wavefile->bitrate_math, 2);
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
+	if (p_wavefile->format_data_length != 16)
+		kill_junk(fp, p_wavefile->format_data_length - 16);
 	read_string(fp, p_wavefile->data_chunk_header, 4);
 	read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
+	if (0 == strcmp(p_wavefile->data_chunk_header, "minf"))
+	{
+		kill_junk(fp, p_wavefile->data_section_size);
+		read_string(fp, p_wavefile->data_chunk_header, 4);
+		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
+	}
+	if (0 == strcmp(p_wavefile->data_chunk_header, "elm1"))
+	{
+		kill_junk(fp, p_wavefile->data_section_size);
+		read_string(fp, p_wavefile->data_chunk_header, 4);
+		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
+	}
+	/* Searching for the data header should also be a loop */
+	/* Now we're ready to read the data! */
 
 	fclose(fp);
+}
+
+void print_header(WaveFile wavefile)
+{
+	printf("RIFF marker: %s\n", wavefile.riff_marker);
+	printf("File size: %ld\n", wavefile.file_size);
+	printf("File type header: %s\n", wavefile.file_type_header);
+	printf("Format chunk marker: %s\n", wavefile.format_chunk_marker);
+	printf("Format data length: %ld\n", wavefile.format_data_length);
+	printf("Format type: %ld\n", wavefile.format_type);
+	printf("Number of channels: %ld\n", wavefile.num_channels);
+	printf("Sample rate: %ld\n", wavefile.sample_rate);
+	printf("Sample math: %ld\n", wavefile.sample_math);
+	printf("Bitrate math: %ld\n", wavefile.bitrate_math);
+	printf("Bits per sample: %ld\n", wavefile.bits_per_sample);
+	printf("Data chunk header: %s\n", wavefile.data_chunk_header);
+	printf("Data section size: %ld\n", wavefile.data_section_size);
 }
 
 int main()
@@ -123,42 +165,7 @@ int main()
 
 	read_wave(&wavefile, filename);
 
-	printf("RIFF marker: %s\n", wavefile.riff_marker);
-//	printf("file_size: %d %d %d %d\n", wavefile.file_size_arr[0], wavefile.file_size_arr[1], 
-//			wavefile.file_size_arr[2], wavefile.file_size_arr[3]);
-	printf("File size: %ld\n", wavefile.file_size);
-	printf("File type header: %s\n", wavefile.file_type_header);
-	printf("Format chunk marker: %s\n", wavefile.format_chunk_marker);
-//	printf("Format data length: %d %d %d %d\n", wavefile.format_data_length_arr[0], 
-//			wavefile.format_data_length_arr[1], wavefile.format_data_length_arr[2], 
-//			wavefile.format_data_length_arr[3]);
-	printf("Format data length: %ld\n", wavefile.format_data_length);
-//	printf("Format type: %d %d\n", wavefile.format_type_arr[0], wavefile.format_type_arr[1]);
-	printf("Format type: %ld\n", wavefile.format_type);
-//	printf("Number of channels: %d %d\n", wavefile.num_channels_arr[0], wavefile.num_channels_arr[1]);
-	printf("Number of channels: %ld\n", wavefile.num_channels);
-//	printf("Sample rate: %d %d %d %d\n", wavefile.sample_rate_arr[0], wavefile.sample_rate_arr[1], 
-//			wavefile.sample_rate_arr[2], wavefile.sample_rate_arr[3]);
-	printf("Sample rate: %ld\n", wavefile.sample_rate);
-//	printf("Sample math: %d %d %d %d\n", wavefile.sample_math_arr[0], wavefile.sample_math_arr[1], 
-//			wavefile.sample_math_arr[2], wavefile.sample_math_arr[3]);
-	printf("Sample math: %ld\n", wavefile.sample_math);
-//	printf("Bitrate math: %d %d\n", wavefile.bitrate_math_arr[0], wavefile.bitrate_math_arr[1]);
-	printf("Bitrate math: %ld\n", wavefile.bitrate_math);
-//	printf("Bits per sample: %d %d\n", wavefile.bits_per_sample_arr[0], wavefile.bits_per_sample_arr[1]);
-	printf("Bits per sample: %ld\n", wavefile.bits_per_sample);
-	printf("Data chunk header: %s\n", wavefile.data_chunk_header);
-//	printf("Data section size: %d %d %d %d\n", wavefile.data_section_size_arr[0], 
-//			wavefile.data_section_size_arr[1], wavefile.data_section_size_arr[2],
-//		       	wavefile.data_section_size_arr[3]);
-	printf("Data section size: %ld\n", wavefile.data_section_size);
-
-	for (i = 0; i < 3; i++)
-	{
-		file_size_calc += (wavefile.file_size_arr[3 - i] << (i * 8));
-	}
-
-	printf("Calculated file size: %lld\n", file_size_calc);
+	print_header(wavefile);
 
 	return 0;
 }
