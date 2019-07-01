@@ -172,6 +172,30 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	fclose(fp);
 }
 
+void print_data_to_csv(char *filename, WaveFile *p_wavefile)
+{
+	FILE *fp = fopen(filename, "w");
+
+	int i, j;
+
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		fprintf(fp, "Ch %d,", i);
+	}
+	fprintf(fp, "\n");
+
+	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
+	{
+		for (j = 0; j < p_wavefile->num_channels; j++)
+		{
+			fprintf(fp, "%d,", p_wavefile->channel_samples[j][i]);
+		}
+		fprintf(fp, "\n");
+		if (i > 1000000)
+			break; // Excel limits to around 1million lines
+	}
+}
+
 void print_header(WaveFile wavefile)
 {
 	printf("RIFF marker: %s\n", wavefile.riff_marker);
@@ -201,7 +225,7 @@ int main()
 	read_wave(&wavefile, filename);
 
 	print_header(wavefile);
-
+	print_data_to_csv("Sun_Traffic.csv", &wavefile);
 
 	destroy_wavearrays(&wavefile);
 	return 0;
