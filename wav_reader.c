@@ -61,7 +61,7 @@ void kill_junk(FILE *fp, int bytes_to_kill)
 		temp = getc(fp);
 	}
 
-	printf("Killed %d bytes. Expected: %d\n", i, bytes_to_kill);
+//	printf("Killed %d bytes. Expected: %d\n", i, bytes_to_kill);
 }
 
 void kill_all_zeros(FILE *fp)
@@ -85,31 +85,20 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_string(fp, p_wavefile->riff_marker, 4);
 	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
 	read_string(fp, p_wavefile->file_type_header, 4);
+
+	/* Read the "fmt" chunk */
 	read_string(fp, p_wavefile->format_chunk_marker, 4);
 	read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	/* Turn these into a "while NOT "fmt"" loop */
-#if 1
-	if (strcmp(p_wavefile->format_chunk_marker, "JUNK") == 0)
+
+	while (0 != strcmp(p_wavefile->format_chunk_marker, "fmt "))
 	{
+		printf("Looking for data chunk \"fmt\"; skipping %ld bytes of data chunk \"%s\"\n", 
+				p_wavefile->format_data_length, p_wavefile->format_chunk_marker);
 		kill_junk(fp, p_wavefile->format_data_length);
 		read_string(fp, p_wavefile->format_chunk_marker, 4);
 		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
 	}
-	if (strcmp(p_wavefile->format_chunk_marker, "bext") == 0)
-	{
-		kill_junk(fp, p_wavefile->format_data_length);
-		read_string(fp, p_wavefile->format_chunk_marker, 4);
-		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	}
-#endif
-#if 0	
-	while (0 != strcmp(p_wavefile->format_chunk_marker, "fmt"))
-	{
-		kill_junk(fp, p_wavefile->format_data_length);
-		read_string(fp, p_wavefile->format_chunk_marker, 4);
-		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	}
-#endif
+
 	read_number(fp, p_wavefile->format_type_arr, &p_wavefile->format_type, 2);
 	read_number(fp, p_wavefile->num_channels_arr, &p_wavefile->num_channels, 2);
 	read_number(fp, p_wavefile->sample_rate_arr, &p_wavefile->sample_rate, 4);
@@ -118,21 +107,19 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
 	if (p_wavefile->format_data_length != 16)
 		kill_junk(fp, p_wavefile->format_data_length - 16);
+
+	/* Read the "data" chunk */
 	read_string(fp, p_wavefile->data_chunk_header, 4);
 	read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
-	if (0 == strcmp(p_wavefile->data_chunk_header, "minf"))
+
+	while (0 != strcmp(p_wavefile->data_chunk_header, "data"))
 	{
+		printf("Looking for data chunk \"data\"; skipping %ld bytes of data chunk \"%s\"\n", 
+				p_wavefile->data_section_size, p_wavefile->data_chunk_header);
 		kill_junk(fp, p_wavefile->data_section_size);
 		read_string(fp, p_wavefile->data_chunk_header, 4);
 		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
 	}
-	if (0 == strcmp(p_wavefile->data_chunk_header, "elm1"))
-	{
-		kill_junk(fp, p_wavefile->data_section_size);
-		read_string(fp, p_wavefile->data_chunk_header, 4);
-		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
-	}
-	/* Searching for the data header should also be a loop */
 	/* Now we're ready to read the data! */
 
 	fclose(fp);
@@ -157,7 +144,8 @@ void print_header(WaveFile wavefile)
 
 int main()
 {
-	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
 	WaveFile wavefile = { 0 };
 
 	long long file_size_calc = 0;
