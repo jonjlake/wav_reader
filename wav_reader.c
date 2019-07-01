@@ -138,8 +138,10 @@ void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
 
 void read_wave(WaveFile *p_wavefile, char *filename)
 {
-	FILE *fp = fopen(filename, "r"); // Double check the open type
+	FILE *fp = fopen(filename, "rb"); // Double check the open type
 	int i,j;
+	fpos_t position;
+	fpos_t position_old;
 	read_string(fp, p_wavefile->riff_marker, 4);
 	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
 	read_string(fp, p_wavefile->file_type_header, 4);
@@ -161,14 +163,24 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	/* Now we're ready to read the data! */
 	allocate_wavearrays(p_wavefile);
 
+	fgetpos(fp, &position);
+	printf("Position %lld\n", position);
 	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
 	{
 		for (j = 0; j < p_wavefile->num_channels; j++)
 		{
+			fgetpos(fp, &position_old);
 			read_data_chunk(fp, &(p_wavefile->channel_samples[j][i]), p_wavefile->bits_per_sample / 8);
+			fgetpos(fp, &position);
+			if (position < position_old)
+				printf("New position %lld is less than old position %lld at i:%d, j:%d\n", 
+						position_old, position, i, j);
 		}
+//		fgetpos(fp, &position);
+//		printf("Position %lld\n", position);	
 	}
-
+	fgetpos(fp, &position);
+	printf("Position %lld\n", position);
 	printf("Read %d samples\n", i);
 	fclose(fp);
 }
