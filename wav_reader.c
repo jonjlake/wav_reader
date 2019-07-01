@@ -100,31 +100,6 @@ void destroy_wavearrays(WaveFile *p_wavefile)
 	p_wavefile->channel_samples = NULL;
 }
 
-void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
-{
-	int i,j;
-	int temp;
-	*output_location = 0;
-//	if (2 != num_bytes_to_read)
-//		printf("%d TOO MANY BYTES!\n", num_bytes_to_read);
-	for (i = 0; i < num_bytes_to_read; i++)
-	{
-//		*output_location += getc(fp) << (i * 8);
-//		*output_location += getc(fp) * (int)(pow(2.0, i));
-		if (0 == i)
-			*output_location = getc(fp) & 255;// & 255;
-		else
-			*output_location |= (getc(fp) << (i * 8)) & (255 << (i * 8));
-/*		temp = getc(fp);
-		for (j = 0; j < 8; j++)
-		{
-			printf("%d", (temp >> j) & 1);
-		}
-		printf(" ");
-*/	}
-//	printf("\n");
-}
-
 void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
 {
 	/* Read the "fmt" chunk */
@@ -150,10 +125,21 @@ void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
 		kill_junk(fp, p_wavefile->format_data_length - 16);
 }
 
+void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
+{
+	int i,j;
+	int temp;
+	(*output_location) = 0;
+	for (i = 0; i < num_bytes_to_read; i++)
+	{
+		(*output_location) |= (getc(fp) & 255) << (i * 8);
+	}
+}
+
 void read_wave(WaveFile *p_wavefile, char *filename)
 {
 	FILE *fp = fopen(filename, "r"); // Double check the open type
-	int i;
+	int i,j;
 	read_string(fp, p_wavefile->riff_marker, 4);
 	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
 	read_string(fp, p_wavefile->file_type_header, 4);
@@ -177,10 +163,9 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 
 	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
 	{
-		int j;
 		for (j = 0; j < p_wavefile->num_channels; j++)
 		{
-			read_data_chunk(fp, &p_wavefile->channel_samples[j][i], p_wavefile->bits_per_sample / 8);
+			read_data_chunk(fp, &(p_wavefile->channel_samples[j][i]), p_wavefile->bits_per_sample / 8);
 		}
 	}
 
@@ -204,12 +189,14 @@ void print_data_to_csv(char *filename, WaveFile *p_wavefile)
 	{
 		for (j = 0; j < p_wavefile->num_channels; j++)
 		{
-			fprintf(fp, "%d,", p_wavefile->channel_samples[j][i]);
+			fprintf(fp, "%hi,", p_wavefile->channel_samples[j][i]);
 		}
 		fprintf(fp, "\n");
 		if (i > 1000000)
 			break; // Excel limits to around 1million lines
 	}
+
+	fclose(fp);
 }
 
 void print_header(WaveFile wavefile)
