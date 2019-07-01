@@ -47,7 +47,6 @@ void read_number(FILE *fp, int *output_location, long int *full_output_location,
 	{
 		output_location[ints_to_read - i - 1] = getc(fp);
 		(*full_output_location) += (output_location[ints_to_read - i - 1] << (i * 8));
-//		printf("Index: %d, Full: %ld\n", output_location[ints_to_read - i - 1], *full_output_location);
 	}
 }
 
@@ -60,8 +59,6 @@ void kill_junk(FILE *fp, int bytes_to_kill)
 	{
 		temp = getc(fp);
 	}
-
-//	printf("Killed %d bytes. Expected: %d\n", i, bytes_to_kill);
 }
 
 void kill_all_zeros(FILE *fp)
@@ -82,12 +79,14 @@ void allocate_wavearrays(WaveFile *p_wavefile)
 {
 	int i;
 
-	p_wavefile->channel_samples = (int **)calloc(p_wavefile->num_channels, sizeof(*p_wavefile->channel_samples));
+	p_wavefile->channel_samples = (short **)calloc(p_wavefile->num_channels, sizeof(*p_wavefile->channel_samples));
 	for (i = 0; i < p_wavefile->num_channels; i++)
 	{
-		p_wavefile->channel_samples[i] = (int *)calloc(p_wavefile->data_section_size / p_wavefile->bitrate_math, 
+		p_wavefile->channel_samples[i] = (short *)calloc(p_wavefile->data_section_size / p_wavefile->bitrate_math, 
 				sizeof(*p_wavefile->channel_samples[i]));
 	}
+	printf("Allocated %ld channels\n", p_wavefile->num_channels);
+	printf("Allocated %ld bytes\n", p_wavefile->data_section_size / p_wavefile->bitrate_math);
 }
 
 void destroy_wavearrays(WaveFile *p_wavefile)
@@ -101,24 +100,33 @@ void destroy_wavearrays(WaveFile *p_wavefile)
 	p_wavefile->channel_samples = NULL;
 }
 
-void read_data_chunk(FILE *fp, int *output_location, int num_bytes_to_read)
+void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
 {
-	int i;
+	int i,j;
+	int temp;
 	*output_location = 0;
+//	if (2 != num_bytes_to_read)
+//		printf("%d TOO MANY BYTES!\n", num_bytes_to_read);
 	for (i = 0; i < num_bytes_to_read; i++)
 	{
-		*output_location += getc(fp) << (i * 8);
-	}
+//		*output_location += getc(fp) << (i * 8);
+//		*output_location += getc(fp) * (int)(pow(2.0, i));
+		if (0 == i)
+			*output_location = getc(fp) & 255;// & 255;
+		else
+			*output_location |= (getc(fp) << (i * 8)) & (255 << (i * 8));
+/*		temp = getc(fp);
+		for (j = 0; j < 8; j++)
+		{
+			printf("%d", (temp >> j) & 1);
+		}
+		printf(" ");
+*/	}
+//	printf("\n");
 }
 
-void read_wave(WaveFile *p_wavefile, char *filename)
+void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
 {
-	FILE *fp = fopen(filename, "r"); // Double check the open type
-	int i;
-	read_string(fp, p_wavefile->riff_marker, 4);
-	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
-	read_string(fp, p_wavefile->file_type_header, 4);
-
 	/* Read the "fmt" chunk */
 	read_string(fp, p_wavefile->format_chunk_marker, 4);
 	read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
@@ -140,6 +148,17 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
 	if (p_wavefile->format_data_length != 16)
 		kill_junk(fp, p_wavefile->format_data_length - 16);
+}
+
+void read_wave(WaveFile *p_wavefile, char *filename)
+{
+	FILE *fp = fopen(filename, "r"); // Double check the open type
+	int i;
+	read_string(fp, p_wavefile->riff_marker, 4);
+	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
+	read_string(fp, p_wavefile->file_type_header, 4);
+
+	read_fmt_chunk(fp, p_wavefile);
 
 	/* Read the "data" chunk */
 	read_string(fp, p_wavefile->data_chunk_header, 4);
@@ -156,7 +175,6 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	/* Now we're ready to read the data! */
 	allocate_wavearrays(p_wavefile);
 
-
 	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
 	{
 		int j;
@@ -167,8 +185,6 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	}
 
 	printf("Read %d samples\n", i);
-	/* Don't destory here! */
-//	destroy_wavearrays(p_wavefile);
 	fclose(fp);
 }
 
@@ -217,6 +233,12 @@ int main()
 {
 //	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
 	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-Alaw-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-AlawWE-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16WE-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\stereol.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\6_Channel_ID.wav";
 	WaveFile wavefile = { 0 };
 
 	long long file_size_calc = 0;

@@ -17,9 +17,9 @@ typedef struct WaveFile
 	int sample_math_arr[4]; // ???
 	long int sample_math;
 	int bitrate_math_arr[2]; // ???
-	long int bitrate_math;
+	long int bitrate_math; // Change this to be block_align, or bytes_per_frame
 	int bits_per_sample_arr[2];
-	long int bits_per_sample;
+	long int bits_per_sample; // Also BitDepth
 	char data_chunk_header[5];
 	int data_section_size_arr[4];
 	long int data_section_size;
@@ -27,5 +27,7 @@ typedef struct WaveFile
 //	int **left_channel_samples;
 //	int **right_channel_samples;
 	/* Leave it open for a generic number of channels */
-	int **channel_samples;
+//	int **channel_samples;
+	short **channel_samples;
+	int num_frames;
 } WaveFile;
