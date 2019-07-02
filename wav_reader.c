@@ -47,7 +47,6 @@ void read_number(FILE *fp, int *output_location, long int *full_output_location,
 	{
 		output_location[ints_to_read - i - 1] = getc(fp);
 		(*full_output_location) += (output_location[ints_to_read - i - 1] << (i * 8));
-//		printf("Index: %d, Full: %ld\n", output_location[ints_to_read - i - 1], *full_output_location);
 	}
 }
 
@@ -60,8 +59,6 @@ void kill_junk(FILE *fp, int bytes_to_kill)
 	{
 		temp = getc(fp);
 	}
-
-	printf("Killed %d bytes. Expected: %d\n", i, bytes_to_kill);
 }
 
 void kill_all_zeros(FILE *fp)
@@ -78,38 +75,46 @@ void kill_all_zeros(FILE *fp)
 	printf("Killed %d chars\n", i);
 }
 
-void read_wave(WaveFile *p_wavefile, char *filename)
+void allocate_wavearrays(WaveFile *p_wavefile)
 {
-	FILE *fp = fopen(filename, "r"); // Double check the open type
 	int i;
-	read_string(fp, p_wavefile->riff_marker, 4);
-	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
-	read_string(fp, p_wavefile->file_type_header, 4);
+
+	p_wavefile->channel_samples = (short **)calloc(p_wavefile->num_channels, sizeof(*p_wavefile->channel_samples));
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		p_wavefile->channel_samples[i] = (short *)calloc(p_wavefile->data_section_size / p_wavefile->bitrate_math, 
+				sizeof(*p_wavefile->channel_samples[i]));
+	}
+	printf("Allocated %ld channels\n", p_wavefile->num_channels);
+	printf("Allocated %ld bytes\n", p_wavefile->data_section_size / p_wavefile->bitrate_math);
+}
+
+void destroy_wavearrays(WaveFile *p_wavefile)
+{
+	int i;
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		free(p_wavefile->channel_samples[i]);
+	}
+	free(p_wavefile->channel_samples);
+	p_wavefile->channel_samples = NULL;
+}
+
+void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
+{
+	/* Read the "fmt" chunk */
 	read_string(fp, p_wavefile->format_chunk_marker, 4);
 	read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	/* Turn these into a "while NOT "fmt"" loop */
-#if 1
-	if (strcmp(p_wavefile->format_chunk_marker, "JUNK") == 0)
+
+	while (0 != strcmp(p_wavefile->format_chunk_marker, "fmt "))
 	{
+		printf("Looking for data chunk \"fmt\"; skipping %ld bytes of data chunk \"%s\"\n", 
+				p_wavefile->format_data_length, p_wavefile->format_chunk_marker);
 		kill_junk(fp, p_wavefile->format_data_length);
 		read_string(fp, p_wavefile->format_chunk_marker, 4);
 		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
 	}
-	if (strcmp(p_wavefile->format_chunk_marker, "bext") == 0)
-	{
-		kill_junk(fp, p_wavefile->format_data_length);
-		read_string(fp, p_wavefile->format_chunk_marker, 4);
-		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	}
-#endif
-#if 0	
-	while (0 != strcmp(p_wavefile->format_chunk_marker, "fmt"))
-	{
-		kill_junk(fp, p_wavefile->format_data_length);
-		read_string(fp, p_wavefile->format_chunk_marker, 4);
-		read_number(fp, p_wavefile->format_data_length_arr, &p_wavefile->format_data_length, 4);
-	}
-#endif
+
 	read_number(fp, p_wavefile->format_type_arr, &p_wavefile->format_type, 2);
 	read_number(fp, p_wavefile->num_channels_arr, &p_wavefile->num_channels, 2);
 	read_number(fp, p_wavefile->sample_rate_arr, &p_wavefile->sample_rate, 4);
@@ -118,22 +123,90 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
 	if (p_wavefile->format_data_length != 16)
 		kill_junk(fp, p_wavefile->format_data_length - 16);
+}
+
+void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
+{
+	int i,j;
+	int temp;
+	(*output_location) = 0;
+	for (i = 0; i < num_bytes_to_read; i++)
+	{
+		(*output_location) |= (getc(fp) & 255) << (i * 8);
+	}
+}
+
+void read_wave(WaveFile *p_wavefile, char *filename)
+{
+	FILE *fp = fopen(filename, "rb"); // Double check the open type
+	int i,j;
+	fpos_t position;
+	fpos_t position_old;
+	read_string(fp, p_wavefile->riff_marker, 4);
+	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
+	read_string(fp, p_wavefile->file_type_header, 4);
+
+	read_fmt_chunk(fp, p_wavefile);
+
+	/* Read the "data" chunk */
 	read_string(fp, p_wavefile->data_chunk_header, 4);
 	read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
-	if (0 == strcmp(p_wavefile->data_chunk_header, "minf"))
+
+	while (0 != strcmp(p_wavefile->data_chunk_header, "data"))
 	{
+		printf("Looking for data chunk \"data\"; skipping %ld bytes of data chunk \"%s\"\n", 
+				p_wavefile->data_section_size, p_wavefile->data_chunk_header);
 		kill_junk(fp, p_wavefile->data_section_size);
 		read_string(fp, p_wavefile->data_chunk_header, 4);
 		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
 	}
-	if (0 == strcmp(p_wavefile->data_chunk_header, "elm1"))
-	{
-		kill_junk(fp, p_wavefile->data_section_size);
-		read_string(fp, p_wavefile->data_chunk_header, 4);
-		read_number(fp, p_wavefile->data_section_size_arr, &p_wavefile->data_section_size, 4);
-	}
-	/* Searching for the data header should also be a loop */
 	/* Now we're ready to read the data! */
+	allocate_wavearrays(p_wavefile);
+
+	fgetpos(fp, &position);
+	printf("Position %lld\n", position);
+	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
+	{
+		for (j = 0; j < p_wavefile->num_channels; j++)
+		{
+			fgetpos(fp, &position_old);
+			read_data_chunk(fp, &(p_wavefile->channel_samples[j][i]), p_wavefile->bits_per_sample / 8);
+			fgetpos(fp, &position);
+			if (position < position_old)
+				printf("New position %lld is less than old position %lld at i:%d, j:%d\n", 
+						position_old, position, i, j);
+		}
+//		fgetpos(fp, &position);
+//		printf("Position %lld\n", position);	
+	}
+	fgetpos(fp, &position);
+	printf("Position %lld\n", position);
+	printf("Read %d samples\n", i);
+	fclose(fp);
+}
+
+void print_data_to_csv(char *filename, WaveFile *p_wavefile)
+{
+	FILE *fp = fopen(filename, "w");
+
+	int i, j;
+
+	for (i = 0; i < p_wavefile->num_channels; i++)
+	{
+		fprintf(fp, "Ch %d,", i);
+	}
+	fprintf(fp, "\n");
+
+	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
+	{
+		for (j = 0; j < p_wavefile->num_channels; j++)
+		{
+			fprintf(fp, "%hi,", p_wavefile->channel_samples[j][i]);
+		}
+		fprintf(fp, "\n");
+		if (i > 1000000)
+			break; // Excel limits to around 1million lines
+	}
 
 	fclose(fp);
 }
@@ -157,7 +230,14 @@ void print_header(WaveFile wavefile)
 
 int main()
 {
-	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-Alaw-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-AlawWE-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16WE-AFsp.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\stereol.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\6_Channel_ID.wav";
 	WaveFile wavefile = { 0 };
 
 	long long file_size_calc = 0;
@@ -166,6 +246,8 @@ int main()
 	read_wave(&wavefile, filename);
 
 	print_header(wavefile);
+	print_data_to_csv("Sun_Traffic.csv", &wavefile);
 
+	destroy_wavearrays(&wavefile);
 	return 0;
 }
