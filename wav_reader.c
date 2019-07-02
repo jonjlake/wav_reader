@@ -113,7 +113,7 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	read_number(fp, p_wavefile->format_type_arr, &p_wavefile->format_type, 2);
 	read_number(fp, p_wavefile->num_channels_arr, &p_wavefile->num_channels, 2);
 	read_number(fp, p_wavefile->sample_rate_arr, &p_wavefile->sample_rate, 4);
-	read_number(fp, p_wavefile->sample_math_arr, &p_wavefile->sample_math, 4);
+	read_number(fp, p_wavefile->byterate_arr, &p_wavefile->byterate, 4);
 	read_number(fp, p_wavefile->bitrate_math_arr, &p_wavefile->bitrate_math, 2);
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
 	if (p_wavefile->format_data_length != 16)
@@ -141,14 +141,14 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 void print_header(WaveFile wavefile)
 {
 	printf("RIFF marker: %s\n", wavefile.riff_marker);
-	printf("File size: %ld\n", wavefile.file_size);
+	printf("File size: %ld bytes\n", wavefile.file_size);
 	printf("File type header: %s\n", wavefile.file_type_header);
 	printf("Format chunk marker: %s\n", wavefile.format_chunk_marker);
 	printf("Format data length: %ld\n", wavefile.format_data_length);
-	printf("Format type: %ld\n", wavefile.format_type);
+	printf("Format type: %ld %s\n", wavefile.format_type, wavefile.format_type == 1 ? "(PCM)" : "");
 	printf("Number of channels: %ld\n", wavefile.num_channels);
-	printf("Sample rate: %ld\n", wavefile.sample_rate);
-	printf("Sample math: %ld\n", wavefile.sample_math);
+	printf("Sample rate: %ld samples/second\n", wavefile.sample_rate);
+	printf("Byte rate: %ld bytes/second\n", wavefile.byterate);
 	printf("Bitrate math: %ld\n", wavefile.bitrate_math);
 	printf("Bits per sample: %ld\n", wavefile.bits_per_sample);
 	printf("Data chunk header: %s\n", wavefile.data_chunk_header);

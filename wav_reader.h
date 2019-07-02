@@ -14,8 +14,10 @@ typedef struct WaveFile
 	long int num_channels;
 	int sample_rate_arr[4];
 	long int sample_rate;
-	int sample_math_arr[4]; // ???
-	long int sample_math;
+//	int sample_math_arr[4]; // ???
+//	long int sample_math;
+	int byterate_arr[4];
+	long int byterate;
 	int bitrate_math_arr[2]; // ???
 	long int bitrate_math;
 	int bits_per_sample_arr[2];
