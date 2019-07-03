@@ -123,6 +123,7 @@ void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
 	read_number(fp, p_wavefile->bits_per_sample_arr, &p_wavefile->bits_per_sample, 2);
 	if (p_wavefile->format_data_length != 16)
 		kill_junk(fp, p_wavefile->format_data_length - 16);
+	p_wavefile->dt = 1.0 / ((double)p_wavefile->sample_rate);
 }
 
 void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
@@ -179,7 +180,7 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 		for (j = 0; j < p_wavefile->num_channels; j++)
 		{
 			fgetpos(fp, &position_old);
-			if (i % 100000 == 0)
+			if (i % 1000000 == 0)
 				printf("Looking at i:%d, j:%d, position:%lld\n", i, j, position_old);
 			read_data_chunk(fp, &(p_wavefile->channel_samples[j][i]), p_wavefile->bits_per_sample / 8);
 			fgetpos(fp, &position);
@@ -191,6 +192,8 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 //		printf("Position %lld\n", position);	
 //		printf(".");
 	}
+	/* Apply this to the above FOR loop */
+	p_wavefile->num_frames = p_wavefile->data_section_size / p_wavefile->bitrate_math;
 	printf("\n");
 	fgetpos(fp, &position);
 	printf("Position %lld\n", position);
@@ -239,9 +242,11 @@ void print_header(WaveFile wavefile)
 	printf("Bits per sample: %ld\n", wavefile.bits_per_sample);
 	printf("Data chunk header: %s\n", wavefile.data_chunk_header);
 	printf("Data section size: %ld\n", wavefile.data_section_size);
+	printf("Number of data frames: %d\n", wavefile.num_frames);
+	printf("Timestep: %f\n", wavefile.dt);
 }
 
-/*
+#if 1
 int main()
 {
 	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
@@ -265,5 +270,5 @@ int main()
 	destroy_wavearrays(&wavefile);
 	return 0;
 }
-*/
+#endif
 

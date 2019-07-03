@@ -32,6 +32,7 @@ typedef struct WaveFile
 //	int **channel_samples;
 	short **channel_samples;
 	int num_frames;
+	double dt;
 } WaveFile;
 
 void read_wave(WaveFile *p_wavefile, char *filename);
