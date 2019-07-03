@@ -142,6 +142,14 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 	int i,j;
 	fpos_t position;
 	fpos_t position_old;
+
+	if (NULL == fp)
+	{
+		printf("Couldn't open file %s\n", filename);
+		return;
+	}
+
+	printf("Reading file %s", filename);
 	read_string(fp, p_wavefile->riff_marker, 4);
 	read_number(fp, p_wavefile->file_size_arr, &p_wavefile->file_size, 4);
 	read_string(fp, p_wavefile->file_type_header, 4);
@@ -165,11 +173,14 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 
 	fgetpos(fp, &position);
 	printf("Position %lld\n", position);
+	printf("Reading %ld bytes\n", p_wavefile->data_section_size / p_wavefile->bitrate_math);
 	for (i = 0; i < p_wavefile->data_section_size / p_wavefile->bitrate_math; i++)
 	{
 		for (j = 0; j < p_wavefile->num_channels; j++)
 		{
 			fgetpos(fp, &position_old);
+			if (i % 100000 == 0)
+				printf("Looking at i:%d, j:%d, position:%lld\n", i, j, position_old);
 			read_data_chunk(fp, &(p_wavefile->channel_samples[j][i]), p_wavefile->bits_per_sample / 8);
 			fgetpos(fp, &position);
 			if (position < position_old)
@@ -178,7 +189,9 @@ void read_wave(WaveFile *p_wavefile, char *filename)
 		}
 //		fgetpos(fp, &position);
 //		printf("Position %lld\n", position);	
+//		printf(".");
 	}
+	printf("\n");
 	fgetpos(fp, &position);
 	printf("Position %lld\n", position);
 	printf("Read %d samples\n", i);
@@ -228,10 +241,11 @@ void print_header(WaveFile wavefile)
 	printf("Data section size: %ld\n", wavefile.data_section_size);
 }
 
+/*
 int main()
 {
-//	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
-	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
+	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-Alaw-AFsp.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-AlawWE-AFsp.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16-AFsp.wav";
@@ -251,3 +265,5 @@ int main()
 	destroy_wavearrays(&wavefile);
 	return 0;
 }
+*/
+
