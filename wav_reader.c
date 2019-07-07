@@ -36,6 +36,7 @@ void read_string(FILE *fp, char *output_location, int chars_to_read)
 		output_location[i] = getc(fp);
 	}
 	output_location[chars_to_read + 1] = '\0';
+//	printf("read string %s\n", output_location);
 }
 
 /* Tweak this to read in a little-endian number correctly */
@@ -48,6 +49,7 @@ void read_number(FILE *fp, int *output_location, long int *full_output_location,
 		output_location[ints_to_read - i - 1] = getc(fp);
 		(*full_output_location) += (output_location[ints_to_read - i - 1] << (i * 8));
 	}
+//	printf("read number %ld\n", *full_output_location);
 }
 
 void kill_junk(FILE *fp, int bytes_to_kill)
@@ -128,15 +130,13 @@ void read_fmt_chunk(FILE *fp, WaveFile *p_wavefile)
 
 void read_data_chunk(FILE *fp, short *output_location, int num_bytes_to_read)
 {
-	int i,j;
-	int temp;
+	int i;
 	(*output_location) = 0;
 	for (i = 0; i < num_bytes_to_read; i++)
 	{
 		(*output_location) |= (getc(fp) & 255) << (i * 8);
 	}
 }
-
 void read_wave(WaveFile *p_wavefile, char *filename)
 {
 	FILE *fp = fopen(filename, "rb"); // Double check the open type
@@ -246,10 +246,10 @@ void print_header(WaveFile wavefile)
 	printf("Timestep: %f\n", wavefile.dt);
 }
 
-#if 1
+#if 0
 int main()
 {
-	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
+//	char filename[128] = "C:\\Users\\PC\\Documents\\Desktop_Dump_2_11_16\\DT\\Sun Traffic.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Downloads\\Sun Traffic.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-Alaw-AFsp.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-AlawWE-AFsp.wav";
@@ -257,6 +257,7 @@ int main()
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\M1F1-int16WE-AFsp.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\stereol.wav";
 //	char filename[128] = "C:\\Users\\JLAKE\\Desktop\\wave_samples\\6_Channel_ID.wav";
+	char filename[128] = "C:\\Users\\PC\\Downloads\\WAV_samples\\M1F1-int16-AFsp.wav";
 	WaveFile wavefile = { 0 };
 
 	long long file_size_calc = 0;

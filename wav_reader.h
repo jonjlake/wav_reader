@@ -39,3 +39,5 @@ void read_wave(WaveFile *p_wavefile, char *filename);
 
 void destroy_wavearrays(WaveFile *p_wavefile);
 
+void print_header(WaveFile wavefile);
+
